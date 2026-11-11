@@ -20,7 +20,7 @@ from pathlib import Path
 
 HOME = Path(os.environ.get("STUDY_OS_HOME") or (Path.home() / ".study-os"))
 
-SUBDIRS = ("mistakes", "cards", "atlas", "logs")
+SUBDIRS = ("mistakes", "cards", "atlas", "resources", "logs")
 
 
 def ensure() -> Path:

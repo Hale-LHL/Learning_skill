@@ -7,6 +7,7 @@
 ├── profile.json
 ├── mistakes/index.json
 ├── cards/cards.json
+├── resources/index.json
 ├── atlas/<slug>/{meta,outline,mastery,quiz}.json + atlas.html
 └── logs/sessions.jsonl
 ```
@@ -174,6 +175,46 @@ ef' = ef + (0.1 - (5-q)(0.08 + (5-q)0.02))，下限 1.3
 
 ---
 
+## resources/index.json —— 资源锚点
+
+```json
+[{"id": "R-20261111-001",
+  "topic": "线代/特征值",
+  "url": "https://www.bilibili.com/video/BV1aW411Q7x1",
+  "bvid": "BV1aW411Q7x1",
+  "platform": "bilibili",
+  "kind": "video",
+  "title": "《线性代数》教学视频  宋浩老师（2024年更新）",
+  "author": "宋浩老师官方",
+  "pubdate": "2018-08-21",
+  "view": 77860091, "like": 1517140, "favorite": 1425332,
+  "coin": 1268421, "reply": 34620, "danmaku": 1782501,
+  "note": "特征值在第 42 讲左右，前 5 分钟在复习行列式",
+  "evergreen": true,
+  "status": "ok",
+  "checked": "2026-11-11",
+  "created": "2026-11-11"}]
+```
+
+| 字段 | 说明 |
+|---|---|
+| `kind` | `video` / `primary`（官方文档、论文原文、教材原书）/ `blog` |
+| `view` `like` `favorite` `coin` | **B 站接口返回的真实值，禁止手填**。取不到就不入库 |
+| `pubdate` | 发布时间。非 `evergreen` 且超过 4 年会提醒可能过时 |
+| `evergreen` | 内容不随版本变化（数学原理、算法思想）。工具/API/考纲类不要标 |
+| `note` | **写第几讲/几分几秒**。只写"讲特征值"没用，用户点进去面对 60 集会直接关掉 |
+| `status` | `ok` / `blocked`（页面在但拒脚本）/ `unreachable`（本次连不上）/ `dead`（404，永不推荐） |
+| `checked` | 上次探活日期。超过 30 天 `pick` 会降权并标注未复检 |
+
+**为什么数字必须来自接口**：AI 写 BV 号是幻觉高发区。实测随手编的 `BV1xx411c7ZZ` 能查到
+一个真实但完全无关的视频——格式对、能打开、内容不相干，比 404 更有害。
+所以 `add` 时对 B 站链接强制走 `api.bilibili.com/x/web-interface/view`，取不到直接失败。
+
+裁决门槛（播放 ≥5 万、收藏/点赞 ≥0.6、收藏/播放 ≥1%）是**工程阈值，无实证依据**，
+见 `evidence.md` §4。改门槛就改 `scripts/resources.py` 顶部的常量，不要散落在文档里。
+
+---
+
 ## logs/sessions.jsonl
 
 每行一个事件，追加写入，不重写：
@@ -184,7 +225,7 @@ ef' = ef + (0.1 - (5-q)(0.08 + (5-q)0.02))，下限 1.3
 {"ts":"2026-11-11T10:41:00","kind":"quiz_answer","slug":"linalg","node":"1.1 线性无关","q_index":2,"choice":"C","correct":"B","cause":"M","revised":true,"lucky":false}
 ```
 
-`kind` 取值：`grade` / `mistake_add` / `mistake_retest` / `quiz_answer`。
+`kind` 取值：`grade` / `mistake_add` / `mistake_retest` / `quiz_answer` / `resource_add`。
 `quiz_answer` 字段含义：`choice` 用户选的字母；`cause` 该干扰项的错因；`revised` 是否改选后答对；`lucky` 答对但说不出为什么（蒙对）。**改选答对记 `warn`，蒙对也记 `warn`，都不记 `ok`。**
 用途：算"同类问题连续通过第 3 次"（毕业条款）。**这是唯一能证明闭环在运转的证据**——没有这个文件，就还是 v2 那种"假装备份"。
 

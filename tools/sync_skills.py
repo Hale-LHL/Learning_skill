@@ -39,17 +39,29 @@ def sync() -> int:
         shutil.copy2(src, dst)
         copied += 1
 
-    # 清掉安装副本里 repo 已删除的文件，避免幽灵文件残留
-    ghost = 0
+    # 清掉安装副本里 repo 已删除的文件，避免幽灵文件残留。
+    # 注意：复制已经在上面完成，这一步失败**不该**让整个同步报错退出。
+    # 部分 Windows 环境的 safe-delete 中间件会拦 Path.unlink 并抛
+    # SAFE_DELETE_FAIL_CLOSED（而且报错说没删，其实有时已经删了），
+    # 之前一次同步就是崩在这里，看起来像"同步失败"，实际文件早就过去了。
+    ghost, failed = 0, []
     for dst in list(DEST.rglob("*")):
         rel = dst.relative_to(DEST)
         if any(part in SKIP_DIRS for part in rel.parts):
             continue
         if not (REPO / rel).exists() and dst.is_file():
-            dst.unlink(missing_ok=True)
-            ghost += 1
+            try:
+                dst.unlink()
+                ghost += 1
+            except OSError:
+                failed.append(str(rel))
 
     print(f"[ok] 同步 {copied} 个文件，跳过 {skipped} 个，清理幽灵文件 {ghost} 个")
+    if failed:
+        print(f"[warn] {len(failed)} 个残留文件删不掉（多半是 safe-delete 中间件拦的），"
+              f"不影响使用，手动删即可：")
+        for rel in failed:
+            print(f"       rm -f \"{DEST / rel}\"")
     print(f"     repo: {REPO}")
     print(f"     安装: {DEST}")
     return 0

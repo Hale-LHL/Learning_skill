@@ -40,6 +40,8 @@ def main() -> int:
         C.save_cards([])
     if not (root / "mistakes/index.json").exists():
         C.save_mistakes([])
+    if not (root / "resources/index.json").exists():
+        C.save("resources/index.json", [])
 
     print(f"[ok] 状态目录：{root}")
     for d in C.SUBDIRS:
