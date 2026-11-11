@@ -92,7 +92,12 @@ grep -r "ghp_" .git/ && echo "有残留，清理" || echo "干净"
    git config branch.main.remote origin
    git config branch.main.merge refs/heads/main
    ```
-4. **这只是绕行，不是修复**。换网络环境（手机热点、公司网）后可能直接就好了，不必一直挂着隧道。
+4. **漏了 `-c credential.helper=` 时的症状极具误导性**：HTTP 层其实已经成功了，但 git 接着去调 `git-credential-manager.exe store` 存凭据，非 TTY 环境里卡住直到超时。表现是**日志 0 字节、屏幕上什么都没有、退出码 1**——看起来像网络失败，实际网络早就通了。诊断：
+   ```bash
+   GIT_TRACE=1 GIT_CURL_VERBOSE=1 git push ... 2>&1 | tail -20
+   ```
+   看到 `Connection #0 to host github.com:443 left intact` 之后紧跟 `run_command: ... git-credential-manager.exe store`，就是它。别再去扫 IP，加 `-c credential.helper=` 重推。
+5. **这只是绕行，不是修复**。换网络环境（手机热点、公司网）后可能直接就好了，不必一直挂着隧道。
 
 ## 不推荐的替代方案
 
