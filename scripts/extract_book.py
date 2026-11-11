@@ -149,6 +149,9 @@ def epub_meta(zf: zipfile.ZipFile) -> tuple[str | None, str | None, list[str]]:
 
 def do_epub(path: Path, slug: str) -> dict:
     out = C.HOME / "atlas" / slug
+    if out.exists() and any(out.iterdir()):
+        # 只覆盖 meta/outline/md；mastery.json 与 quiz.json 是用户产物，不动
+        print(f"[warn] {slug} 已存在，将覆盖 meta/outline/md（mastery.json、quiz.json 保留）")
     out.mkdir(parents=True, exist_ok=True)
 
     with zipfile.ZipFile(path) as zf:
@@ -204,6 +207,8 @@ def do_epub(path: Path, slug: str) -> dict:
 
 def do_pdf(path: Path, slug: str, toc_file: Path | None) -> dict:
     out = C.HOME / "atlas" / slug
+    if out.exists() and any(out.iterdir()):
+        print(f"[warn] {slug} 已存在，将覆盖 meta/outline/md（mastery.json、quiz.json 保留）")
     out.mkdir(parents=True, exist_ok=True)
 
     if toc_file:
