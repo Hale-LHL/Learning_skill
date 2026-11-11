@@ -5,7 +5,12 @@
 
 可选输入（放在同目录）：
     mastery.json   {"章节标题": "ok"|"warn"|"blank"}   掌握度标记
-    quiz.json      [{"node":"章节标题","q":"问题","a":"答案"}]   检索题
+    quiz.json      检索题。两种形态：
+                   选择题  {"node":..,"q":..,"a":..,"correct":"B",
+                            "options":[{"k":"A","text":..,"cause":"M"},…]}
+                   短答题  {"node":..,"q":..,"a":..}        （没有 options）
+                   有 options 时页面上可点选，点完立刻标对错并告知干扰项错因。
+                   出完题跑 scripts/check_quiz.py 过一遍规则再生成。
 
 为什么不用 markmap / mermaid CDN：
     离线能开、断网能开、发给别人也能开。原生 <details> 就够折叠了。
@@ -72,6 +77,20 @@ details.ans{padding:0}
 .empty{color:var(--muted);font-size:14px;padding:30px 0}
 .tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:20px;
   border:1px solid var(--line);color:var(--muted);margin-left:6px;vertical-align:middle}
+.qblock{padding:14px 0;border-top:1px dashed var(--line)}
+.qblock:first-of-type{border-top:none;padding-top:0}
+.opts{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.opt{display:flex;gap:9px;align-items:baseline;padding:7px 11px;border:1px solid var(--line);
+  border-radius:8px;cursor:pointer;font-size:14px;line-height:1.55;background:var(--bg)}
+.opt:hover{border-color:var(--accent)}
+.opt b{color:var(--muted);font-weight:600;flex:none}
+.opt.ok{border-color:var(--ok);background:rgba(47,125,79,.10)}
+.opt.ok b{color:var(--ok)}
+.opt.bad{border-color:var(--bad);background:rgba(168,50,50,.09)}
+.opt.bad b{color:var(--bad)}
+.qblock[data-done="1"] .opt{cursor:default}
+.fb{font-size:13px;min-height:0}
+.fbok{color:var(--ok)} .fbbad{color:var(--bad)}
 footer{padding:16px 32px;border-top:1px solid var(--line);color:var(--muted);
   font-size:12px;background:var(--panel)}
 @media(max-width:820px){main{grid-template-columns:1fr}
@@ -131,6 +150,80 @@ def html_escape(s: str) -> str:
     )
 
 
+JS = r"""
+const DATA = __DATA__;
+const nodes = DATA.nodes, mastery = DATA.mastery, quiz = DATA.quiz;
+const detail = document.getElementById('detail');
+const CAUSE = {K:'知识缺口',M:'概念误解',P:'程序错误',R:'表征错误',T:'迁移失败'};
+
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+function qBlock(x, i){
+  const correct = x.correct || '';
+  const hasOpts = !!(x.options && x.options.length);
+  let h = `<div class="qblock" data-correct="${esc(correct)}">`;
+  h += `<p class="q">${i+1}. ${esc(x.q)}</p>`;
+  if(hasOpts){
+    h += '<div class="opts">';
+    x.options.forEach(o => {
+      h += `<div class="opt" data-ok="${o.k === correct ? '1' : '0'}" data-k="${esc(o.k)}" data-c="${esc(o.cause || '')}">`
+         + `<b>${esc(o.k)}</b><span>${esc(o.text)}</span></div>`;
+    });
+    h += '</div><div class="fb"></div>';
+  }
+  h += `<details class="ans"><summary>${hasOpts ? '对完答案再看' : '先自己说一遍，再展开'}</summary>`
+     + `<p>${esc(x.a)}</p></details>`;
+  return h + '</div>';
+}
+
+function show(title){
+  const node = nodes.find(n => n.title === title);
+  const state = mastery[title] || '';
+  const stateTxt = {ok:'已掌握',warn:'有偏差',blank:'空白'}[state] || '未评估';
+  const qs = quiz.filter(x => x.node === title || (node && node.path.includes(x.node)));
+  const crumb = node ? node.path.slice(0,-1).join(' / ') || '顶层' : '';
+  let h = `<h2>${esc(title)}<span class="tag">${stateTxt}</span></h2>`;
+  h += `<div class="crumb">${esc(crumb)}</div>`;
+  if(qs.length){
+    h += `<div class="card"><h3>先答，再看答案</h3>` + qs.map(qBlock).join('') + `</div>`;
+  } else {
+    h += `<div class="card"><h3>这一节还没有题</h3>
+      <p>比看笔记有用的一件事：现在闭卷说出这一节的<b>三个要点</b>，
+      然后让我对照书里内容标出你漏了什么。</p></div>`;
+  }
+  if(state === 'blank'){
+    h += `<div class="card"><h3>标记为空白</h3>
+      <p>先别读正文。用最小示范建立框架 → 复述 → 再读。</p></div>`;
+  }
+  detail.innerHTML = h;
+  document.querySelectorAll('.leaf').forEach(el => el.classList.toggle('active', el.dataset.title === title));
+}
+
+detail.addEventListener('click', ev => {
+  const el = ev.target.closest('.opt');
+  if(!el) return;
+  const blk = el.closest('.qblock');
+  if(!blk || blk.dataset.done === '1') return;
+  blk.dataset.done = '1';
+  const isRight = el.dataset.ok === '1';
+  el.classList.add(isRight ? 'ok' : 'bad');
+  if(!isRight){
+    blk.querySelectorAll('.opt').forEach(o => { if(o.dataset.ok === '1') o.classList.add('ok'); });
+  }
+  const fb = blk.querySelector('.fb');
+  if(!fb) return;
+  fb.innerHTML = isRight
+    ? `<span class="fbok">对。正确项就是 ${esc(blk.dataset.correct)}。</span>`
+    : `<span class="fbbad">错。你选的这项是「${esc(CAUSE[el.dataset.c] || '干扰项')}」型（${esc(el.dataset.c || '?')}）。`
+      + `先别急着看答案——这类错误以后会在哪里骗到你？</span>`;
+});
+
+document.querySelectorAll('.leaf').forEach(el => {
+  el.addEventListener('click', () => show(el.dataset.title));
+});
+"""
+
+
 def build_html(meta: dict, tree: list[dict], mastery: dict, quiz: list[dict]) -> str:
     flat = []
 
@@ -156,6 +249,7 @@ def build_html(meta: dict, tree: list[dict], mastery: dict, quiz: list[dict]) ->
     # 章节标题来自第三方 EPUB，不可控。若标题含 </script>，会提前闭合脚本块、
     # 让整页报废，同时也是一条注入路径。<\/ 在 JSON 里是合法转义，解析后还原。
     data = data.replace("</", "<\\/")
+    js = JS.replace("__DATA__", data)
 
     return f"""<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="utf-8">
@@ -199,45 +293,7 @@ def build_html(meta: dict, tree: list[dict], mastery: dict, quiz: list[dict]) ->
   </div>
 </main>
 <footer>study-os · 图是题目来源，不是阅读材料。</footer>
-<script>
-const DATA = {data};
-const nodes = DATA.nodes, mastery = DATA.mastery, quiz = DATA.quiz;
-const detail = document.getElementById('detail');
-
-function esc(s){{return String(s).replace(/[&<>"]/g,c=>({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}}[c]));}}
-
-function show(title){{
-  const node = nodes.find(n => n.title === title);
-  const state = mastery[title] || '';
-  const stateTxt = {{ok:'已掌握',warn:'有偏差',blank:'空白'}}[state] || '未评估';
-  const qs = quiz.filter(x => x.node === title || (node && node.path.includes(x.node)));
-  const crumb = node ? node.path.slice(0,-1).join(' / ') || '顶层' : '';
-  let h = `<h2>${{esc(title)}}<span class="tag">${{stateTxt}}</span></h2>`;
-  h += `<div class="crumb">${{esc(crumb)}}</div>`;
-  if(qs.length){{
-    h += `<div class="card"><h3>闭卷答一遍，再看答案</h3>`;
-    qs.forEach((x,i) => {{
-      h += `<p class="q">${{i+1}}. ${{esc(x.q)}}</p>`;
-      h += `<details class="ans"><summary>展开答案</summary><p>${{esc(x.a)}}</p></details>`;
-    }});
-    h += `</div>`;
-  }} else {{
-    h += `<div class="card"><h3>这一节还没有题</h3>
-      <p>比看笔记有用的一件事：现在闭卷说出这一节的<b>三个要点</b>，
-      然后让我对照书里内容标出你漏了什么。</p></div>`;
-  }}
-  if(state === 'blank'){{
-    h += `<div class="card"><h3>标记为空白</h3>
-      <p>先别读正文。用最小示范建立框架 → 复述 → 再读。</p></div>`;
-  }}
-  detail.innerHTML = h;
-  document.querySelectorAll('.leaf').forEach(el => el.classList.toggle('active', el.dataset.title === title));
-}}
-
-document.querySelectorAll('.leaf').forEach(el => {{
-  el.addEventListener('click', () => show(el.dataset.title));
-}});
-</script>
+<script>{js}</script>
 </body></html>"""
 
 

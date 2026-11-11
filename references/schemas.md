@@ -143,15 +143,34 @@ ef' = ef + (0.1 - (5-q)(0.08 + (5-q)0.02))，下限 1.3
 
 ### mastery.json —— 掌握度标记
 ```json
-{"第一章 向量空间": "warn", "1.1 线性无关": "ok", "1.2 基与维数": "blank"}
+{"第一章 向量空间": "warn", "1.1 线性无关": "ok", "1.2 基与维数": "blank", "2.2 矩阵表示": "skipped"}
 ```
-取值 `ok`（已掌握）/ `warn`（有偏差）/ `blank`（空白）。键必须与 `outline.json` 的 `title` **完全一致**，否则点不亮。
+取值 `ok`（已掌握）/ `warn`（有偏差，含"改选才答对"和"蒙对"）/ `blank`（空白）/ `skipped`（用户主动跳过，**不加罚**）。键必须与 `outline.json` 的 `title` **完全一致**，否则点不亮。
 
-### quiz.json —— 检索题
+### quiz.json —— 检索题（选择题 + 短答题）
 ```json
-[{"node": "1.1 线性无关", "q": "线性无关的定义是什么？", "a": "若 k1v1+…+knvn=0 只有零解。"}]
+[{"node": "1.1 线性无关",
+  "q": "「向量组线性无关」是什么意思？",
+  "a": "k1v1+…+knvn=0 只有零解。",
+  "correct": "B",
+  "options": [
+    {"k": "A", "text": "其中任意一个向量都能被其余向量线性表示出来", "cause": "K"},
+    {"k": "B", "text": "k1v1+…+knvn=0 成立时，系数必须全为零", "cause": null},
+    {"k": "C", "text": "向量组里没有任何两个向量是平行或共线的", "cause": "M"},
+    {"k": "D", "text": "向量组里的向量个数不超过空间的维数", "cause": "T"}
+  ]},
+ {"node": "第一章 向量空间",
+  "q": "收尾一题，没有选项：用一句话说这章解决了什么问题？",
+  "a": "把「能不能凑出某个向量」变成可计算的问题。"}]
 ```
 `node` 可以是节标题（精确匹配）或章标题（其下所有节都会显示这道题）。
+
+| 字段 | 说明 |
+|---|---|
+| `options` | 省略 = **无选项短答题**（章末必留一道，识别≠回忆） |
+| `correct` | 正确项的 `k`，必须是 `options` 里存在的字母 |
+| `options[].cause` | **干扰项专属**，取 `K/M/P/R/T`；正确项填 `null`。选错靠它定位错因 |
+| 规则与质检 | 见 `book-atlas.md` §2.3，跑 `scripts/check_quiz.py <slug>` 验 |
 
 ---
 
@@ -162,9 +181,11 @@ ef' = ef + (0.1 - (5-q)(0.08 + (5-q)0.02))，下限 1.3
 ```json
 {"ts":"2026-11-11T10:30:00","kind":"grade","id":"c-20261111-001","q":4,"interval":1}
 {"ts":"2026-11-11T10:35:00","kind":"mistake_add","id":"M-20261111-001","cause":"M"}
+{"ts":"2026-11-11T10:41:00","kind":"quiz_answer","slug":"linalg","node":"1.1 线性无关","q_index":2,"choice":"C","correct":"B","cause":"M","revised":true,"lucky":false}
 ```
 
-`kind` 取值：`grade` / `mistake_add` / `mistake_retest`。
+`kind` 取值：`grade` / `mistake_add` / `mistake_retest` / `quiz_answer`。
+`quiz_answer` 字段含义：`choice` 用户选的字母；`cause` 该干扰项的错因；`revised` 是否改选后答对；`lucky` 答对但说不出为什么（蒙对）。**改选答对记 `warn`，蒙对也记 `warn`，都不记 `ok`。**
 用途：算"同类问题连续通过第 3 次"（毕业条款）。**这是唯一能证明闭环在运转的证据**——没有这个文件，就还是 v2 那种"假装备份"。
 
 ---

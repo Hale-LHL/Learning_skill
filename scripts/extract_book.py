@@ -309,8 +309,9 @@ def main() -> int:
 
     print(f"[ok] {meta['title']}  ({meta['chapters']} 个标题, 约 {meta['words']} 字)")
     print(f"     目录：{C.HOME / 'atlas' / slug}")
-    print(f"\n     下一步别急着看图。先让我把目录念给你，你闭卷回忆每章骨架。")
-    print(f"     生成导图：python scripts/build_atlas.py {slug}")
+    print(f"\n     下一步别急着看图。先出题：一章 4 道选择题 + 1 道无选项短答。")
+    print(f"     出完跑质检：python scripts/check_quiz.py {slug}   （E 类不过不许问人）")
+    print(f"     生成导图：  python scripts/build_atlas.py {slug}")
     return 0
 
 

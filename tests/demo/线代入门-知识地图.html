@@ -48,6 +48,20 @@ details.ans{padding:0}
 .empty{color:var(--muted);font-size:14px;padding:30px 0}
 .tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:20px;
   border:1px solid var(--line);color:var(--muted);margin-left:6px;vertical-align:middle}
+.qblock{padding:14px 0;border-top:1px dashed var(--line)}
+.qblock:first-of-type{border-top:none;padding-top:0}
+.opts{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.opt{display:flex;gap:9px;align-items:baseline;padding:7px 11px;border:1px solid var(--line);
+  border-radius:8px;cursor:pointer;font-size:14px;line-height:1.55;background:var(--bg)}
+.opt:hover{border-color:var(--accent)}
+.opt b{color:var(--muted);font-weight:600;flex:none}
+.opt.ok{border-color:var(--ok);background:rgba(47,125,79,.10)}
+.opt.ok b{color:var(--ok)}
+.opt.bad{border-color:var(--bad);background:rgba(168,50,50,.09)}
+.opt.bad b{color:var(--bad)}
+.qblock[data-done="1"] .opt{cursor:default}
+.fb{font-size:13px;min-height:0}
+.fbok{color:var(--ok)} .fbbad{color:var(--bad)}
 footer{padding:16px 32px;border-top:1px solid var(--line);color:var(--muted);
   font-size:12px;background:var(--panel)}
 @media(max-width:820px){main{grid-template-columns:1fr}
@@ -56,18 +70,18 @@ footer{padding:16px 32px;border-top:1px solid var(--line);color:var(--muted);
 <body>
 <header>
   <h1>线性代数入门</h1>
-  <div class="sub">测试作者 · 生成于 2026-11-11</div>
+  <div class="sub">示例作者 · 生成于 2026-11-11</div>
   <div class="stats">
-    <div class="stat"><b>6</b>目录节点</div>
-    <div class="stat"><b>218</b>字数</div>
-    <div class="stat"><b>6/6</b>已评估</div>
-    <div class="stat"><b>2</b>已掌握</div>
-    <div class="stat"><b>2</b>有偏差</div>
-    <div class="stat"><b>2</b>空白</div>
+    <div class="stat"><b>2</b>目录节点</div>
+    <div class="stat"><b>8,900</b>字数</div>
+    <div class="stat"><b>3/6</b>已评估</div>
+    <div class="stat"><b>1</b>已掌握</div>
+    <div class="stat"><b>1</b>有偏差</div>
+    <div class="stat"><b>1</b>空白</div>
   </div>
 </header>
 <main>
-  <div id="tree"><details open><summary><span class="dot warn"></span>第一章 向量空间</summary><div class="children"><div class="leaf" data-title="1.1 线性无关"><span class="dot ok"></span><span>1.1 线性无关</span></div><div class="leaf" data-title="1.2 基与维数"><span class="dot blank"></span><span>1.2 基与维数</span></div></div></details><details open><summary><span class="dot ok"></span>第二章 线性变换</summary><div class="children"><div class="leaf" data-title="2.1 矩阵表示"><span class="dot warn"></span><span>2.1 矩阵表示</span></div><div class="leaf" data-title="2.2 特征值"><span class="dot blank"></span><span>2.2 特征值</span></div></div></details></div>
+  <div id="tree"><details open><summary><span class="dot"></span>第一章 向量空间</summary><div class="children"><div class="leaf" data-title="1.1 线性无关"><span class="dot ok"></span><span>1.1 线性无关</span></div><div class="leaf" data-title="1.2 基与维数"><span class="dot warn"></span><span>1.2 基与维数</span></div></div></details><details open><summary><span class="dot"></span>第二章 线性变换</summary><div class="children"><div class="leaf" data-title="2.1 线性变换的定义"><span class="dot blank"></span><span>2.1 线性变换的定义</span></div><div class="leaf" data-title="2.2 矩阵表示"><span class="dot"></span><span>2.2 矩阵表示</span></div></div></details></div>
   <div id="detail">
     <h2>先别看这张图</h2>
     <div class="crumb">这是整个技能里最反直觉的一条规则</div>
@@ -91,11 +105,30 @@ footer{padding:16px 32px;border-top:1px solid var(--line);color:var(--muted);
 </main>
 <footer>study-os · 图是题目来源，不是阅读材料。</footer>
 <script>
-const DATA = {"meta": {"title": "线性代数入门", "author": "测试作者", "source": "tests\\sample.epub", "format": "epub", "chapters": 6, "words": 218, "slug": "linalg"}, "nodes": [{"title": "第一章 向量空间", "path": ["第一章 向量空间"], "words": 127}, {"title": "1.1 线性无关", "path": ["第一章 向量空间", "1.1 线性无关"], "words": 38}, {"title": "1.2 基与维数", "path": ["第一章 向量空间", "1.2 基与维数"], "words": 31}, {"title": "第二章 线性变换", "path": ["第二章 线性变换"], "words": 91}, {"title": "2.1 矩阵表示", "path": ["第二章 线性变换", "2.1 矩阵表示"], "words": 29}, {"title": "2.2 特征值", "path": ["第二章 线性变换", "2.2 特征值"], "words": 33}], "mastery": {"第一章 向量空间": "warn", "1.1 线性无关": "ok", "1.2 基与维数": "blank", "第二章 线性变换": "ok", "2.1 矩阵表示": "warn", "2.2 特征值": "blank"}, "quiz": [{"node": "1.1 线性无关", "q": "线性无关的定义是什么？不看书写出来。", "a": "若 k₁v₁+…+kₙvₙ=0 只有零解，则这组向量线性无关。"}, {"node": "1.2 基与维数", "q": "维数为什么和基的选择无关？", "a": "任意两组基的向量个数相同，这是替换引理的直接推论。"}, {"node": "2.1 矩阵表示", "q": "矩阵的列是怎么来的？", "a": "把每个基向量的像写成坐标列，按顺序拼起来。"}, {"node": "2.2 特征值", "q": "特征值一定是实数吗？", "a": "不一定。实矩阵也可能有共轭复特征值成对出现。"}, {"node": "第二章 线性变换", "q": "这章和第一章的关系是什么？去掉第一章，哪一步会读不懂？", "a": "矩阵表示必须先选定一组基，而基与维数是第一章的内容。"}]};
+const DATA = {"meta": {"title": "线性代数入门", "author": "示例作者", "source": "tests/sample.epub", "format": "epub", "chapters": 2, "words": 8900, "slug": "linalg-demo"}, "nodes": [{"title": "第一章 向量空间", "path": ["第一章 向量空间"], "words": 4700}, {"title": "1.1 线性无关", "path": ["第一章 向量空间", "1.1 线性无关"], "words": 2100}, {"title": "1.2 基与维数", "path": ["第一章 向量空间", "1.2 基与维数"], "words": 2600}, {"title": "第二章 线性变换", "path": ["第二章 线性变换"], "words": 4200}, {"title": "2.1 线性变换的定义", "path": ["第二章 线性变换", "2.1 线性变换的定义"], "words": 1800}, {"title": "2.2 矩阵表示", "path": ["第二章 线性变换", "2.2 矩阵表示"], "words": 2400}], "mastery": {"1.1 线性无关": "ok", "1.2 基与维数": "warn", "2.1 线性变换的定义": "blank"}, "quiz": [{"node": "1.1 线性无关", "q": "「向量组线性无关」是什么意思？", "a": "若 k1v1+…+knvn=0 只有零解（所有系数全为 0），则称该向量组线性无关；等价于其中任何一个向量都不能被其余向量线性表示。", "correct": "B", "options": [{"k": "A", "text": "其中任意一个向量都能被其余向量线性表示出来", "cause": "K"}, {"k": "B", "text": "k1v1+…+knvn=0 成立时，系数必须全为零", "cause": null}, {"k": "C", "text": "向量组里没有任何两个向量是平行或共线的", "cause": "M"}, {"k": "D", "text": "向量组里的向量个数不超过空间的维数", "cause": "T"}]}, {"node": "1.2 基与维数", "q": "一组向量要成为空间的「基」，需要满足什么？", "a": "两个条件同时满足：线性无关；能线性表示空间中的任意向量。缺任何一个都不行——只无关则张不满，只张满则有多余。", "correct": "C", "options": [{"k": "A", "text": "向量个数正好等于空间的维数", "cause": "M"}, {"k": "B", "text": "其中每个向量都是单位向量或标准基向量", "cause": "K"}, {"k": "C", "text": "满足两个条件：线性无关，且能表示任意向量", "cause": null}, {"k": "D", "text": "这组向量两两正交且长度都为 1", "cause": "R"}]}, {"node": "2.1 线性变换的定义", "q": "要验证一个映射 T: V→W 是线性变换，需要验什么？", "a": "两条同时成立：T(u+v)=T(u)+T(v，保持加法) 与 T(kv)=k·T(v)，保持数乘。只验其中一条不够——现实中常有「保持加法但不保持数乘」的映射。", "correct": "B", "options": [{"k": "A", "text": "只要把零向量映到零向量，就一定是线性的", "cause": "M"}, {"k": "B", "text": "保持加法与数乘这两条，都必须逐条验证", "cause": null}, {"k": "C", "text": "只要它把向量空间的直线映成直线即可", "cause": "R"}, {"k": "D", "text": "只要它保持向量之间的加法这一条即可", "cause": "K"}]}, {"node": "第一章 向量空间", "q": "收尾一题，没有选项：用一句话说这章解决了什么问题？说错也算过。", "a": "参考答案：把「线性组合能不能凑出某个向量」变成一个可以计算的问题（解方程组），并给出「最少需要几个向量才够」的判据（维数）。"}, {"node": "第二章 线性变换", "q": "收尾一题，没有选项：用一句话说这章和上一章是什么关系？", "a": "参考答案：上一章研究空间本身的结构（向量、基、维数），这一章研究空间之间的映射；矩阵是线性变换在选定基下的坐标表示——同一变换换一组基，矩阵会变，变换本身不变。"}]};
 const nodes = DATA.nodes, mastery = DATA.mastery, quiz = DATA.quiz;
 const detail = document.getElementById('detail');
+const CAUSE = {K:'知识缺口',M:'概念误解',P:'程序错误',R:'表征错误',T:'迁移失败'};
 
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+function qBlock(x, i){
+  const correct = x.correct || '';
+  const hasOpts = !!(x.options && x.options.length);
+  let h = `<div class="qblock" data-correct="${esc(correct)}">`;
+  h += `<p class="q">${i+1}. ${esc(x.q)}</p>`;
+  if(hasOpts){
+    h += '<div class="opts">';
+    x.options.forEach(o => {
+      h += `<div class="opt" data-ok="${o.k === correct ? '1' : '0'}" data-k="${esc(o.k)}" data-c="${esc(o.cause || '')}">`
+         + `<b>${esc(o.k)}</b><span>${esc(o.text)}</span></div>`;
+    });
+    h += '</div><div class="fb"></div>';
+  }
+  h += `<details class="ans"><summary>${hasOpts ? '对完答案再看' : '先自己说一遍，再展开'}</summary>`
+     + `<p>${esc(x.a)}</p></details>`;
+  return h + '</div>';
+}
 
 function show(title){
   const node = nodes.find(n => n.title === title);
@@ -106,12 +139,7 @@ function show(title){
   let h = `<h2>${esc(title)}<span class="tag">${stateTxt}</span></h2>`;
   h += `<div class="crumb">${esc(crumb)}</div>`;
   if(qs.length){
-    h += `<div class="card"><h3>闭卷答一遍，再看答案</h3>`;
-    qs.forEach((x,i) => {
-      h += `<p class="q">${i+1}. ${esc(x.q)}</p>`;
-      h += `<details class="ans"><summary>展开答案</summary><p>${esc(x.a)}</p></details>`;
-    });
-    h += `</div>`;
+    h += `<div class="card"><h3>先答，再看答案</h3>` + qs.map(qBlock).join('') + `</div>`;
   } else {
     h += `<div class="card"><h3>这一节还没有题</h3>
       <p>比看笔记有用的一件事：现在闭卷说出这一节的<b>三个要点</b>，
@@ -124,6 +152,25 @@ function show(title){
   detail.innerHTML = h;
   document.querySelectorAll('.leaf').forEach(el => el.classList.toggle('active', el.dataset.title === title));
 }
+
+detail.addEventListener('click', ev => {
+  const el = ev.target.closest('.opt');
+  if(!el) return;
+  const blk = el.closest('.qblock');
+  if(!blk || blk.dataset.done === '1') return;
+  blk.dataset.done = '1';
+  const isRight = el.dataset.ok === '1';
+  el.classList.add(isRight ? 'ok' : 'bad');
+  if(!isRight){
+    blk.querySelectorAll('.opt').forEach(o => { if(o.dataset.ok === '1') o.classList.add('ok'); });
+  }
+  const fb = blk.querySelector('.fb');
+  if(!fb) return;
+  fb.innerHTML = isRight
+    ? `<span class="fbok">对。正确项就是 ${esc(blk.dataset.correct)}。</span>`
+    : `<span class="fbbad">错。你选的这项是「${esc(CAUSE[el.dataset.c] || '干扰项')}」型（${esc(el.dataset.c || '?')}）。`
+      + `先别急着看答案——这类错误以后会在哪里骗到你？</span>`;
+});
 
 document.querySelectorAll('.leaf').forEach(el => {
   el.addEventListener('click', () => show(el.dataset.title));
