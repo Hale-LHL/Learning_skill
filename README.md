@@ -209,10 +209,14 @@ The premise comes from a 2025 PNAS study: students using a plain chatbot scored 
 
 Three workflows: mistake diagnosis (7 root-cause categories), book structuring (EPUB/PDF → interactive map, where the map is a question bank, not reading material), and guided Q&A (three-axis decision table; never quiz a beginner).
 
-Python 3.9+, standard library only. MIT.
+Python 3.9+, standard library only. Non-commercial license.
 
 ---
 
 ## License
 
-MIT
+**非商业使用许可（Non-Commercial License）** — 个人学习、教学、科研用途可免费使用、修改、分发。**未经作者事先书面认可，任何组织或个人不得将本作品用于商业用途**（出售、订阅收费、嵌入付费产品/服务、广告变现等）。
+
+商业使用授权逐案审批：通过 GitHub Issue 联系 [@Hale-LHL](https://github.com/Hale-LHL)。
+
+Non-commercial use, modification and redistribution are free for personal learning, teaching and research. **Commercial use is prohibited without prior written approval from the author** (case-by-case grant via GitHub Issue). See [LICENSE](LICENSE) for full terms; the Chinese text prevails.
