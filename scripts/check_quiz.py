@@ -20,6 +20,7 @@
     W1 正确项是唯一最长的那个 —— 长度线索泄漏，用户不看内容也能蒙
     W2 最长与最短相差超过 1.8 倍 —— 同上，只是弱一点
     W3 正确项没写边界（条件 / 当 / 若 / 只有 / 前提 …）—— 这题大概率只测到复述
+        （定义/含义类问题放行：定义本身就长那样，硬塞条件词是造作）
     W4 全篇「概念误解型」干扰项占比 < 20% —— 剩下的题偏送分
     W5 有章一道题都没有
     W6 有章全是选择题、没有无选项题 —— 只测到「认得」，没测到「想得起」
@@ -124,10 +125,14 @@ def check_item(idx: int, it: dict) -> list[tuple[str, str, str]]:
                 out.append(("W2", "warn", f"选项长度 {lo}–{hi} 字，相差 {hi / lo:.1f} 倍，过长的那项会被优先读"))
 
     # ---- 正确项有没有写边界 ----
+    # 定义/含义类问题放行：定义本身就是「A 叫 B」，硬塞条件词反而造作——
+    # 真实教材的题跑过一遍才知道，定义题几乎条条触发 W3，警告会被人无视。
+    q_text = _t(it.get("q"))
+    definitional = any(w in q_text for w in ("定义", "含义", "指的是"))
     for o in opts:
         if _t(o.get("k")).upper() == correct:
             t = _t(o.get("text"))
-            if not any(b in t for b in BOUNDARY):
+            if not definitional and not any(b in t for b in BOUNDARY):
                 out.append(("W3", "warn", "正确项没写成立边界（条件/当/若/只有…），这题可能只考了复述"))
     return out
 
@@ -235,7 +240,13 @@ def main() -> int:
     print(C.pad("#", 4) + C.pad("节点", 34) + C.pad("题型", 6) + "结果")
     for i, node, kind, msgs in results:
         flags = [m for m in msgs]
-        status = "ok" if not flags else f"{len(flags)} 项"
+        # i=0 是章级/全局提醒行，不是题；显示成「1 项」会让人以为那儿有一道题
+        if not flags:
+            status = "ok"
+        elif i == 0:
+            status = "提醒"
+        else:
+            status = f"{len(flags)} 项"
         print(C.pad(str(i) if i else "·", 4) + C.pad(node, 34) + C.pad(kind, 6) + status)
         for code, level, msg in flags:
             print(f"    [{'E' if level == 'err' else 'W'}{code[1:]} {level}] {msg}")

@@ -251,19 +251,77 @@ def do_epub(path: Path, slug: str) -> dict:
     return meta
 
 
-def do_pdf(path: Path, slug: str, toc_file: Path | None) -> dict:
+TOC_PAGE_RE = re.compile(r"^(.*?)[.·…\s]{3,}(\d{1,4})\s*\.?\s*$")
+
+
+def parse_toc_lines(lines: list[str]) -> list[dict]:
+    """目录文本 → outline。行末 `…… 37` 这类页码顺手提取（要求有点分隔符，
+    防止把「习题 1-3」的 3 当页码）。`#` 开头是注释。
+    """
+    outline = []
+    for ln in lines:
+        s = ln.strip()
+        if not s or s.startswith("#"):
+            continue
+        m = re.match(r"^(\s*)(.+?)\s*$", ln)
+        indent, title = len(m.group(1)), m.group(2)
+        page = None
+        m2 = TOC_PAGE_RE.match(title)
+        if m2:
+            title, page = m2.group(1).rstrip(".·… "), int(m2.group(2))
+        node = {"level": min(indent // 2 + 1, 3), "title": title, "words": 0, "file": ""}
+        if page is not None:
+            node["page"] = page
+        outline.append(node)
+    return outline
+
+
+def export_pages(doc, slug: str, spec: str) -> Path:
+    """把指定页渲染成 PNG，供多模态阅读（扫描书的目录页转写用）。
+
+    spec: "3-8" 或 "3,5,7-9"。1 起始，含端点。
+    """
+    outdir = C.HOME / "atlas" / slug / "pages"
+    outdir.mkdir(parents=True, exist_ok=True)
+    pages: list[int] = []
+    for part in spec.split(","):
+        if "-" in part:
+            a, b = part.split("-", 1)
+            pages.extend(range(int(a), int(b) + 1))
+        elif part.strip():
+            pages.append(int(part))
+    exported = []
+    for p in pages:
+        if not 1 <= p <= doc.page_count:
+            print(f"[warn] 页码 {p} 超出范围（1-{doc.page_count}），跳过")
+            continue
+        pix = doc[p - 1].get_pixmap(dpi=200)
+        fp = outdir / f"p{p:03d}.png"
+        pix.save(str(fp))
+        exported.append(fp.name)
+    print(f"[ok] 已导出 {len(exported)} 页到 {outdir}")
+    print(f"     把目录页截图交给能看图的一侧转写成 toc.txt（一行一条，缩进表层级），")
+    print(f"     再跑：python scripts/extract_book.py <书> --toc toc.txt --slug {slug}")
+    return outdir
+
+
+def pdf_text_chars(doc, samples: int = 5) -> int:
+    """抽样估计全书文本层规模。扫描版这个数接近 0。"""
+    n = doc.page_count
+    idx = {max(0, min(n - 1, int(n * f))) for f in (0.1, 0.3, 0.5, 0.7, 0.9)}
+    return sum(len(doc[i].get_text().strip()) for i in idx)
+
+
+def do_pdf(path: Path, slug: str, toc_file: Path | None, export: str = "") -> dict:
     out = C.HOME / "atlas" / slug
     if out.exists() and any(out.iterdir()):
         print(f"[warn] {slug} 已存在，将覆盖 meta/outline/md（mastery.json、quiz.json 保留）")
     out.mkdir(parents=True, exist_ok=True)
 
     if toc_file:
-        lines = [ln.strip() for ln in toc_file.read_text(encoding="utf-8").splitlines() if ln.strip()]
-        outline = []
-        for ln in lines:
-            m = re.match(r"^(\s*)(.+)$", ln)
-            indent = len(m.group(1))
-            outline.append({"level": min(indent // 2 + 1, 3), "title": m.group(2), "words": 0, "file": ""})
+        # 不能先 strip：缩进就是层级。注释/空行的过滤交给 parse_toc_lines
+        lines = toc_file.read_text(encoding="utf-8").splitlines()
+        outline = parse_toc_lines(lines)
         meta = {
             "title": path.stem,
             "author": "",
@@ -278,26 +336,56 @@ def do_pdf(path: Path, slug: str, toc_file: Path | None) -> dict:
         return meta
 
     try:
-        import fitz  # PyMuPDF
+        import pymupdf as fitz  # PyMuPDF ≥1.26 的正式名
     except ImportError:
-        raise SystemExit(
-            "[err] PDF 提取需要 PyMuPDF：pip install pymupdf\n"
-            "      不想装的话，用降级路径：\n"
-            "        1) 把书的目录页截图或复制成文本，存成 toc.txt\n"
-            "        2) python scripts/extract_book.py book.pdf --toc toc.txt\n"
-            "      这样能拿到结构，正文按需逐章贴给我。\n"
-            "      （扫描版 PDF 需要 OCR，不在本工具范围内。）"
-        )
+        try:
+            import fitz  # 旧版 shim
+        except ImportError:
+            raise SystemExit(
+                "[err] PDF 提取需要 PyMuPDF：pip install pymupdf\n"
+                "      不想装的话，用降级路径：\n"
+                "        1) 把书的目录页截图或复制成文本，存成 toc.txt\n"
+                "        2) python scripts/extract_book.py book.pdf --toc toc.txt\n"
+                "      这样能拿到结构，正文按需逐章贴给我。\n"
+                "      （扫描版 PDF 需要 OCR，不在本工具范围内。）"
+            )
 
     doc = fitz.open(path)
+
+    if export:
+        export_pages(doc, slug, export)
+        doc.close()
+        raise SystemExit(0)
+
     toc = doc.get_toc()  # [[level, title, page], ...]
+    text_chars = pdf_text_chars(doc)
+
+    # 扫描版探测：无书签 + 文本层接近 0。绝不能伪造「第 X 页起」的假章节——
+    # 那是"残缺目录树冒充成功"，exit 0 比报错更有害。
+    if not toc and text_chars < 50:
+        doc.close()
+        raise SystemExit(
+            f"[err] 这本 PDF 没有文本层（抽样 5 页共 {text_chars} 字符），是纯扫描版，\n"
+            "      结构提取和正文提取都做不了。两条可行路径：\n"
+            "\n"
+            "      路径 1（要结构，推荐）：把目录页导出成图片，交给能看图的一侧转写\n"
+            f"        python scripts/extract_book.py \"{path.name}\" --slug {slug} --export-pages 3-10\n"
+            "        （页码按实际的目录位置改）\n"
+            f"        转写成 toc.txt 后：python scripts/extract_book.py \"{path.name}\" --slug {slug} --toc toc.txt\n"
+            "\n"
+            "      路径 2（已有目录文本）：直接 --toc toc.txt，行末 `…… 37` 的页码会自动识别"
+        )
+
     outline = []
     total_words = 0
     md_parts = []
     for lvl, title, page in toc:
         outline.append({"level": min(lvl, 3), "title": title, "words": 0, "page": page, "file": ""})
     if not toc:
-        outline = [{"level": 1, "title": f"第 {i+1} 页起", "words": 0, "page": i + 1} for i in range(0, len(doc), 10)]
+        # 有文本层但没书签的原生 PDF：如实说没有结构，不伪造。
+        print("[warn] 这本 PDF 有文本层但没有书签目录，outline 为空。", file=sys.stderr)
+        print("       可用 --toc toc.txt 提供目录（缩进表层级，行末页码可自动识别）。", file=sys.stderr)
+        print("       正文仍会完整导出成 md，可先用于模式 B。", file=sys.stderr)
     for i, page in enumerate(doc):
         t = page.get_text()
         total_words += len(t)
@@ -322,7 +410,9 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="把电子书拆成结构")
     ap.add_argument("book")
     ap.add_argument("--slug", default="")
-    ap.add_argument("--toc", default="", help="手动目录文本（PDF 降级用，缩进表示层级）")
+    ap.add_argument("--toc", default="", help="手动目录文本（PDF 降级用，缩进表示层级，行末页码可自动识别）")
+    ap.add_argument("--export-pages", default="", dest="export_pages",
+                    help="只把指定页渲染成 PNG（如 3-10 或 3,5,7-9），供扫描书目录页转写用")
     args = ap.parse_args()
 
     path = Path(args.book).expanduser()
@@ -342,7 +432,7 @@ def main() -> int:
                 if not toc_path.exists():
                     print(f"[err] --toc 指向的文件不存在：{toc_path}", file=sys.stderr)
                     return 1
-            meta = do_pdf(path, slug, toc_path)
+            meta = do_pdf(path, slug, toc_path, args.export_pages)
         else:
             print(f"[err] 只支持 .epub / .pdf，收到 {path.suffix}", file=sys.stderr)
             return 1

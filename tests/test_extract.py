@@ -81,5 +81,66 @@ m2 = E.do_epub(plain, "plain")
 check("规范样本标题数不变", m2["chapters"] == 6, f"chapters={m2['chapters']}")
 check("规范样本文本非空", m2["words"] > 50, f"words={m2['words']}")
 
+print("\n== toc.txt 解析（真实扫描书转写用）==")
+outline = E.parse_toc_lines([
+    "# 注释行要忽略",
+    "绪论 …… 1",
+    "第一章 函数 极限与连续 …… 4",
+    "  §1.1 映射与函数 …… 4",
+    "    一、集合 区间与邻域 …… 4.",
+    "    习题 1-3 …… 27",
+])
+check("注释行被忽略", len(outline) == 5, f"n={len(outline)}")
+check("章是 L1", outline[1]["level"] == 1, str(outline[1]))
+check("节是 L2（缩进 2 空格）", outline[2]["level"] == 2, str(outline[2]))
+check("小节是 L3（缩进 4 空格）", outline[3]["level"] == 3, str(outline[3]))
+check("页码提取成功（含尾点）", outline[3].get("page") == 4, str(outline[3]))
+check("「习题 1-3」不会被误当页码 3", outline[4].get("page") == 27 and "习题 1-3" in outline[4]["title"],
+      str(outline[4]))
+no_page = E.parse_toc_lines(["某节没有页码"])
+check("没页码的行不硬造 page 字段", "page" not in no_page[0], str(no_page[0]))
+
+# ---- 真实书测试暴露的两个坑：扫描版伪造成功、无书签伪造章节 ----
+try:
+    import pymupdf
+    HAS_PDF = True
+except ImportError:
+    HAS_PDF = False
+if HAS_PDF:
+    print("\n== PDF：扫描版与无书签书不许伪造成功 ==")
+    # 纯图 PDF（无文本层、无书签）——微积分教材的真实形态
+    scan = pymupdf.open()
+    page = scan.new_page()
+    page.insert_image(page.rect, pixmap=pymupdf.Pixmap(pymupdf.csRGB, page.rect, False))
+    scan.save(str(work / "scan.pdf"))
+    scan.close()
+    try:
+        E.do_pdf(work / "scan.pdf", "scan", None)
+        check("扫描书应当抛错", False, "没抛错 = 又要产出假目录")
+    except SystemExit as exc:
+        msg = str(exc)
+        check("扫描书抛 SystemExit", True)
+        check("说清是没有文本层", "文本层" in msg, msg[:60])
+        check("给出 --export-pages 路径", "--export-pages" in msg, msg[:120])
+        check("给出 --toc 路径", "--toc" in msg)
+
+    # 有文本层但没书签：不许伪造「第 X 页起」
+    native = pymupdf.open()
+    p1 = native.new_page()
+    p1.insert_text((72, 100), "hello calculus " * 30, fontsize=11)
+    native.save(str(work / "native.pdf"))
+    native.close()
+    m3 = E.do_pdf(work / "native.pdf", "native", None)
+    nat_outline = json.loads((work / "atlas/native/outline.json").read_text(encoding="utf-8"))
+    check("无书签 PDF 的 outline 是空的（不伪造页段）", nat_outline == [], str(nat_outline)[:60])
+    check("正文仍然完整导出", m3["words"] > 100, f"words={m3['words']}")
+
+    # --toc 路径仍然可用
+    toc = work / "t.txt"
+    toc.write_text("第一章 试foo …… 3\n  1.1 小节 …… 5\n", encoding="utf-8")
+    m4 = E.do_pdf(work / "native.pdf", "nattoc", toc)
+    t_outline = json.loads((work / "atlas/nattoc/outline.json").read_text(encoding="utf-8"))
+    check("--toc 手动目录生效", len(t_outline) == 2 and t_outline[1]["level"] == 2, str(t_outline))
+
 print(f"\n{'=' * 40}\n通过 {PASSED}　失败 {FAILED}")
 sys.exit(1 if FAILED else 0)
