@@ -156,11 +156,20 @@ study-os/
 │   ├── extract_book.py           EPUB/PDF → 结构
 │   └── build_atlas.py            结构 → 可交互 HTML
 ├── tests/
-│   └── make_sample_epub.py       测试用 EPUB 生成器
+│   ├── make_sample_epub.py       测试用 EPUB 生成器
+│   └── demo/                     生成好的知识地图样例（可直接打开）
+├── tools/
+│   └── gh_tunnel.py              受限网络下访问 GitHub 的本地隧道（见 docs/04）
 └── docs/
-    ├── 01-research-and-plan.md   调研与方案抉择
-    └── 02-diagnosis-learning-coach-v2.md   上一版的问题诊断
+    ├── 01-research-and-plan.md            调研与方案抉择
+    ├── 02-diagnosis-learning-coach-v2.md  上一版的问题诊断
+    ├── 03-self-review.md                  第三方视角自审与据此的修订
+    └── 04-github-access.md                连不上 GitHub 时怎么办
 ```
+
+> 如果你在国内网络环境下 `git clone` 或 `push` 报 TLS 错误、证书错误，直接看
+> [`docs/04-github-access.md`](docs/04-github-access.md)——那多半不是你的配置问题，
+> 是 DNS 解析到的 IP 被阻断，换一个官方 IP 就能通。
 
 ---
 
