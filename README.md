@@ -69,6 +69,14 @@ EPUB 用标准库直接解析（zip + XHTML），不需要装任何东西。PDF 
 
 **图是题目来源，不是阅读材料。** 演示页在 [`tests/demo/线代入门-知识地图.html`](tests/demo/线代入门-知识地图.html)，点左边节点就能看到可点的选择题。
 
+模式 B 的三件套生成完后必须过校验，**退出码 0 才允许交付**：
+
+```bash
+python scripts/verify_atlas.py <slug>
+```
+
+C1 覆盖率、C2 溯源率、C3 三件套是算出来的，不是"我读了一遍觉得挺好"。C2 的分母是「断言行」——我自己算的验算式、闭卷题、代码块里的公式都不算，因为它们本来就不该有原书页码。另外每个节至少要有一处 `[§]` 兜底：行级比例能把长句拆短句稀释掉，整节无出处则直接判死。
+
 ### 3. 引导式答疑
 
 不直接给答案，但也不是无脑反问。
@@ -174,7 +182,7 @@ C:/Users/<你>/AppData/Local/Programs/Python/Python3xx/python.exe scripts/init.p
 
 ```
 study-os/
-├── SKILL.md                      主入口（246 行，含三轴裁决表与外部锚点规则）
+├── SKILL.md                      主入口（247 行，含三轴裁决表与外部锚点规则）
 ├── references/
 │   ├── core-rules.md             句式库（可直接抄的话术）
 │   ├── mistake-workflow.md       错题七类归因与补漏
@@ -182,18 +190,25 @@ study-os/
 │   ├── resource-anchors.md       外部讲解：时机、门槛、防编造流程
 │   ├── evidence.md               证据底账（含置信度分级）
 │   └── schemas.md                数据格式
+├── templates/
+│   └── digest.md                 模式 B 速览的骨架（含填写规则，校验脚本按它解析）
 ├── scripts/
 │   ├── init.py                   初始化
 │   ├── review.py                 SM-2 复习调度
 │   ├── mistake.py                错题库与错误画像
 │   ├── extract_book.py           EPUB/PDF → 结构
 │   ├── check_quiz.py             选择题质检（选项规则可执行版）
+│   ├── verify_atlas.py           模式 B 交付前校验（C1–C3 可算，C4/C5 列清单）
 │   ├── resources.py              资源锚点库（B 站数据走接口，不手填）
 │   └── build_atlas.py            结构 → 可交互 HTML
 ├── tests/
-│   ├── make_sample_epub.py       测试用 EPUB 生成器
+│   ├── make_sample_epub.py       规范的 EPUB 生成器
+│   ├── make_hard_epub.py         故意刁难的 EPUB（EPUB2/编码路径/div 段落/DRM）
+│   ├── sample_digest.md          能过校验的速览样例
 │   ├── sample_quiz.json          符合规则的题库样例（跑 check_quiz.py 全过）
-│   ├── test_resources.py         资源裁决逻辑测试（18 项，不联网）
+│   ├── test_resources.py         资源裁决测试（18 项，不联网）
+│   ├── test_verify.py            校验口径测试（21 项：既测抓得住，也测不误伤）
+│   ├── test_extract.py           脏 EPUB 解析测试（12 项：不许静默丢章）
 │   └── demo/                     生成好的知识地图样例（可直接打开，含可点选项）
 ├── tools/
 │   └── gh_tunnel.py              受限网络下访问 GitHub 的本地隧道（见 docs/04）
@@ -215,7 +230,8 @@ study-os/
 
 - **不能替代你自己投入的时间**。一本 300 页的书要真学会，你还是得花 3–6 小时。这个工具的作用是把这些时间花在有反馈的地方，不是压缩成 10 分钟。
 - **自评数据不可靠**，所以系统不信任自评。但如果用户持续谎报 `grade` 分数，整个闭环就失效了。这是它对你唯一的要求：别骗它。
-- **EPUB 解析只在"规范 EPUB"上验证过**。我的测试样本是自己造的（`<h1>`–`<h4>` 标记标题、标准 OPF、spine 顺序正确）。真实电子书常见的问题是：标题用 `<div class="h1">` 而非 `<h1>`、OPF 路径不规范、spine 顺序错乱。遇到这些，`extract_book.py` 可能提到 0 个标题然后报错。**报错是设计行为（不会给你一个残缺的目录树冒充成功），但请别把"支持 EPUB"理解成"能处理任何 EPUB"。**
+- **EPUB 解析验证过六种"脏结构"，但还没在真实出版物上跑过**。测试样本是自己造的，分两套：一套规范样本，一套刻意刁难的（EPUB2 + NCX 目录、href 用 percent-encoding、文件名含中文空格和 `&`、段落包在 `<div>` 里、四层标题、spine 混封面页、带 DRM 的变体）。`tests/test_extract.py` 12 项钉住这些行为，其中三项是**以前会静默丢章**的：编码路径读不到就 `continue`、div 段落整章字数归零、加密书抽出乱码。现在分别改成 unquote 后重试 + `[warn] 已跳过`、认 div 为块级容器、检测到加密直接报错。
+  仍然无解的一种：**标题不用 `<h1>`–`<h6>`，而是 `<div class="h1">`**。这种提不到任何标题，脚本会报错退出——报错是设计行为（不给你残缺目录冒充成功），但别把"支持 EPUB"理解成"能处理任何 EPUB"。
 - **PDF 提取能力有限**。扫描版需要 OCR，不在范围内。没装 PyMuPDF 时只能手动提供目录。
 - **选择题模式是性价比折中，不是最优解**。它把每个知识点的收益打了折（识别 ≠ 回忆），换来的是"你真的会一章一章走完"。不嫌打字的话，把 `quiz.json` 里的 `options` 删掉，就退化成简答题——收益更高，摩擦更大。这个开关故意留着。
 - **错因归因需要判断力**。脚本只提供分类框架，判对判错靠对话质量。判错了，`retest --fail` 会提醒你回去重判。

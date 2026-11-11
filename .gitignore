@@ -4,6 +4,8 @@ __pycache__/
 
 # 测试生成的二进制与产物
 tests/sample.epub
+tests/sample_hard.epub
+tests/sample_hard_drm.epub
 tests/demo/*
 # 但演示页面要进仓库，方便在 GitHub 上直接点开看效果
 !tests/demo/*.html

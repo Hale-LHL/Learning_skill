@@ -20,6 +20,7 @@ import json
 import posixpath
 import re
 import sys
+import urllib.parse
 import zipfile
 from html.parser import HTMLParser
 from pathlib import Path
@@ -43,7 +44,11 @@ NS = {
 class TextExtract(HTMLParser):
     """从 XHTML 片段里抽标题与正文。"""
 
-    BLOCK = {"p", "div", "br", "li", "tr"}
+    # 块级容器：结束时要 flush。
+    # div 必须在里面——很多转换工具把整段文字直接包在 <div class="para"> 里，
+    # 不套 <p>。不认 div 的后果不是"少几段"，而是整章正文全丢，
+    # 而 outline 里标题还在，看起来像"提取成功、字数 0"。
+    BLOCK = {"p", "div", "br", "li", "tr", "td", "blockquote"}
 
     def __init__(self):
         super().__init__(convert_charrefs=True)
@@ -56,7 +61,9 @@ class TextExtract(HTMLParser):
     def handle_starttag(self, tag, attrs):
         if tag in ("script", "style", "head"):
             self._skip += 1
-        if tag in ("h1", "h2", "h3", "h4", "p", "li"):
+        # h1–h6 全收：四层标题的书不少见（部 / 章 / 节 / 小节）
+        if tag in ("h1", "h2", "h3", "h4", "h5", "h6",
+                   "p", "li", "div", "td", "blockquote"):
             self._flush()
             self._tag = tag
             self._buf = []
@@ -132,6 +139,11 @@ def epub_meta(zf: zipfile.ZipFile) -> tuple[str | None, str | None, list[str]]:
         if item.tag.split("}")[-1] == "item":
             iid, href = item.get("id"), item.get("href")
             if iid and href:
+                # href 里可能是 percent-encoding（`%E7%AC%AC%201%20%E7%AB%A0…`），
+                # 而 zip 条目名是原文。不解码的话 zf.read() 抛 KeyError，
+                # 而旧代码是 `except KeyError: continue`——整整一章被静默吞掉，
+                # 目录里少一章也不报错。真实书上这个坑很常见。
+                href = urllib.parse.unquote(href)
                 manifest[iid] = posixpath.normpath(posixpath.join(base, href))
 
     order: list[str] = []
@@ -147,6 +159,28 @@ def epub_meta(zf: zipfile.ZipFile) -> tuple[str | None, str | None, list[str]]:
     return title, author, order
 
 
+def check_encrypted(zf: zipfile.ZipFile) -> None:
+    """DRM 检测：正文被加密时必须直说，不许抽出一堆乱码冒充目录。
+
+    encryption.xml 也用于「字体混淆」——那种只加密字体，正文能读。
+    所以只在被加密的目标是 xhtml/opf 时才拦。判错方向的代价不对称：
+    误报只是让用户确认一下，漏报会让他拿到一本乱码"摘要"。
+    """
+    try:
+        raw = zf.read("META-INF/encryption.xml").decode("utf-8", "ignore")
+    except KeyError:
+        return
+    uris = re.findall(r'URI="([^"]+)"', raw)
+    hit = [u for u in uris if u.lower().endswith((".xhtml", ".html", ".htm", ".opf"))]
+    if hit:
+        raise RuntimeError(
+            "这本 EPUB 的正文被加密了（DRM），标准库解不开。\n"
+            f"      被加密的正文文件：{hit[0]}\n"
+            "      换一本未加密的，或先用 Calibre 去 DRM（请自行确认合法）。\n"
+            "      没有书也别停：把目录拍照或复制给我，走 PDF 的手动目录路径。"
+        )
+
+
 def do_epub(path: Path, slug: str) -> dict:
     out = C.HOME / "atlas" / slug
     if out.exists() and any(out.iterdir()):
@@ -155,15 +189,21 @@ def do_epub(path: Path, slug: str) -> dict:
     out.mkdir(parents=True, exist_ok=True)
 
     with zipfile.ZipFile(path) as zf:
+        check_encrypted(zf)
         title, author, order = epub_meta(zf)
+        names = set(zf.namelist())
         md_parts: list[str] = []
         outline: list[dict] = []
         total_words = 0
+        lost: list[str] = []
 
         for p in order:
+            # 少数书是反过来：OPF 里写原文，zip 里存编码名
+            real = p if p in names else urllib.parse.quote(p, safe="/")
             try:
-                raw = zf.read(p).decode("utf-8", errors="ignore")
+                raw = zf.read(real).decode("utf-8", errors="ignore")
             except KeyError:
+                lost.append(p)
                 continue
             ex = TextExtract()
             ex.feed(raw)
@@ -188,6 +228,12 @@ def do_epub(path: Path, slug: str) -> dict:
 
     if not outline:
         raise RuntimeError("没提取到任何标题。这本 EPUB 可能是图片版，或标题没用 h1-h3 标记。")
+
+    if lost:
+        # 静默丢章是最阴的失败模式：目录看着正常，少了一章谁也不知道
+        print(f"[warn] {len(lost)} 个 spine 文件在 zip 里找不到，已跳过（目录可能缺章）：")
+        for x in lost[:3]:
+            print(f"        {x}")
 
     meta = {
         "title": title or path.stem,

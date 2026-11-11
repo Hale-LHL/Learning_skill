@@ -141,11 +141,11 @@ Dunlosky 2013 那篇综述评的是 10 种**学习技术**，其中被评为低�
 
 ### 3.4 电子书结构化 → `references/book-atlas.md`
 
-入口：`extract_book.py` → `check_quiz.py` → `build_atlas.py`
+入口：`extract_book.py` → `check_quiz.py` → `build_atlas.py`；模式 B 另加 `verify_atlas.py`
 
 **两条路**：
 - 用户要**学会** → 模式 A：一章一章过，**一次只问一题、每题四个选项**（打字成本从"一段话"降到"一个字母"），答错先反问不给答案，章末一道无选项短答。干扰项按错因构造，选错即定位病灶。
-- 用户要**拿材料** → 模式 B：三件套 + 五项校验 + 头部声明"这是速览不是学会"。
+- 用户要**拿材料** → 模式 B：三件套（digest + atlas.html + 对照表）+ 五项校验 + 头部声明"这是速览不是学会"。**`verify_atlas.py` 退出码 0 才能交付**；C4/C5 脚本替不了，结论里会明说。
 
 **三条反模式**：① 发书直接吐全书导图；② 一章一章让用户口述一大段（第三轮他就绕开）；③ 全程选择题不写一个字（只练到认得，考试要写时写不出）。
 
@@ -165,6 +165,7 @@ Dunlosky 2013 那篇综述评的是 10 种**学习技术**，其中被评为低�
 | `python scripts/mistake.py stats` | 错误画像 |
 | `python scripts/extract_book.py <file>` | 电子书 → 结构 |
 | `python scripts/check_quiz.py <slug>` | 选择题质检（E 类不过不许拿去问人） |
+| `python scripts/verify_atlas.py <slug>` | 模式 B 交付前校验（退出码 0 才能交） |
 | `python scripts/resources.py add/probe/pick` | 资源锚点库（B 站数据走接口，不手填） |
 | `python scripts/build_atlas.py <slug>` | 结构 → 可交互 HTML |
 
