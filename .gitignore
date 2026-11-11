@@ -4,7 +4,9 @@ __pycache__/
 
 # 测试生成的二进制与产物
 tests/sample.epub
-tests/demo/
+tests/demo/*
+# 但演示页面要进仓库，方便在 GitHub 上直接点开看效果
+!tests/demo/*.html
 *.bak-*
 
 # 状态目录（正常情况下在 ~/.study-os，不在这里，但防一手）
